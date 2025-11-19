@@ -1,0 +1,30 @@
+{
+  "name": "textmode.accurate.js",
+  "version": "0.6.0-beta.3",
+  "description": "Accurate glyph matching conversion plugin for textmode.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "textmode.js": "^0.6.0-beta.4"
+  },
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.2",
+    "vite": "^6.3.4"
+  },
+  "license": "MIT",
+  "author": "humanbydefinition",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/humanbydefinition/textmode.js"
+  }
+}

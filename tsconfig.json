@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "declarationDir": "dist/types",
+    "declaration": true,
+  "emitDeclarationOnly": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": false,
+    "types": [],
+    "baseUrl": ".",
+    "paths": {
+      "textmode.js": ["../../dist/types/index"]
+    }
+  },
+  "include": ["src"]
+}

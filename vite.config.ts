@@ -1,13 +1,15 @@
 import { defineConfig } from 'vite';
 import path from 'path';
 import terser from '@rollup/plugin-terser';
-import { createGLSLPlugin } from '../../vite-plugins/glsl-minify';
 
 export default defineConfig(() => {
   return {
     resolve: {
       alias: {
         'textmode.accurate.js': path.resolve(__dirname, 'src/index.ts'),
+      },
+      server: {
+        open: '/examples/index.html',
       },
     },
     build: {
@@ -50,7 +52,6 @@ export default defineConfig(() => {
           }) as any,
         ],
       },
-    },
-    plugins: [createGLSLPlugin(true)],
+    }
   };
 });

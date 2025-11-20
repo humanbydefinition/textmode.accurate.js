@@ -1,6 +1,6 @@
 {
   "name": "textmode.accurate.js",
-  "version": "0.6.0-beta.3",
+  "version": "1.0.0",
   "description": "Accurate glyph matching conversion plugin for textmode.js",
   "type": "module",
   "main": "./dist/index.js",

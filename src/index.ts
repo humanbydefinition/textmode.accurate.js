@@ -27,25 +27,39 @@ const accurateStrategy: TextmodeConversionStrategy = {
 	},
 };
 
+/**
+ * Creates a textmode.js plugin that provides an accurate glyph matching conversion strategy.
+ * @returns A textmode.js plugin instance.
+ */
 export const createAccurateConversionPlugin = (): TextmodePlugin => ({
-	name: 'textmode-accurate-conversion',
+	name: 'textmode.accurate',
+
 	version: '1.0.0',
+
+	/**
+	 * Installs the accurate conversion strategy into textmode.js.
+	 * @param textmodifier The textmodifier instance to install the plugin into.
+	 */
 	async install(textmodifier) {
 		accurateShader = await textmodifier.createFilterShader(accurateFragmentShader);
 		registerConversionStrategy(accurateStrategy);
 
 	},
+
+	/**
+	 * Uninstalls the accurate conversion strategy from textmode.js.
+	 */
 	async uninstall() {
 		unregisterConversionStrategy(strategyId);
 		if (accurateShader) {
-			accurateShader.$dispose();
+			accurateShader.dispose();
 			accurateShader = null;
 		}
 	},
 });
 
 if (typeof window !== 'undefined') {
-	(window as any).createTextmodeAccurateConversionPlugin = createAccurateConversionPlugin;
+	(window as any).createAccurateConversionPlugin = createAccurateConversionPlugin;
 }
 
 export type { TextmodeConversionStrategy } from 'textmode.js';

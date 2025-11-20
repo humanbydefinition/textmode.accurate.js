@@ -18,7 +18,7 @@ export default defineConfig(() => {
       lib: {
         entry: path.resolve(__dirname, 'src/index.ts'),
         name: 'textmodeAccurate',
-        fileName: (format) => `textmode-accurate.${format === 'es' ? 'esm' : format}.js`,
+        fileName: (format) => `textmode.accurate.${format === 'es' ? 'esm' : format}.js`,
         formats: ['es', 'umd'],
       },
       rollupOptions: {

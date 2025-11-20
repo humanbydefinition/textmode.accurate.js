@@ -28,16 +28,8 @@ const t = textmode.create({
 
 t.setup(async () => {
   const image = await t.loadImage('https://example.com/photo.jpg');
-  image.conversionMode('accurate', { sampleRate: 10 });
+  image.conversionMode('accurate');
 });
 ```
 
 The plugin registers the `accurate` conversion strategy at installation time. Once installed, any `TextmodeSource` can switch to the mode by calling `conversionMode('accurate')`.
-
-## Build
-
-The add-on ships as TypeScript. Run the following from the package root to generate distributable JavaScript and declaration files:
-
-```bash
-npm run build
-```

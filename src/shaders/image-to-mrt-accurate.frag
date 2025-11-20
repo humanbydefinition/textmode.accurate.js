@@ -3,9 +3,8 @@ precision highp float;
 
 in vec2 v_uv;
 
+// Base uniforms filled in by textmode.js
 uniform sampler2D u_image;
-uniform sampler2D u_characterTexture;
-
 uniform bool u_invert;
 uniform bool u_flipX;
 uniform bool u_flipY;
@@ -17,12 +16,15 @@ uniform vec4 u_cellColor;
 uniform vec4 u_backgroundColor;
 uniform int u_charCount;
 uniform vec3 u_charList[255];
-uniform vec2 u_imageCellDimensions;
-uniform ivec2 u_charsetDimensions;
-uniform int u_sampleGridSize;
 uniform bool u_colorFilterEnabled;
 uniform int u_colorFilterSize;
 uniform vec4 u_colorFilterPalette[64];
+
+// Uniforms specific to accurate conversion
+uniform sampler2D u_characterTexture;
+uniform ivec2 u_charsetDimensions;
+uniform vec2 u_imageCellDimensions;
+uniform int u_sampleGridSize;
 
 layout(location = 0) out vec4 o_character;
 layout(location = 1) out vec4 o_primaryColor;

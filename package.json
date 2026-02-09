@@ -13,8 +13,8 @@
     "build": "vite build && tsc -p tsconfig.json",
     "dev": "vite --port 5179 --host"
   },
-  "peerDependencies": {
-    "textmode.js": "^0.6.0-beta.5"
+  "dependencies": {
+    "textmode.js": "^0.10.0-beta.2"
   },
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",
@@ -27,6 +27,6 @@
   "author": "humanbydefinition",
   "repository": {
     "type": "git",
-    "url": "https://github.com/humanbydefinition/textmode.js"
+    "url": "https://github.com/humanbydefinition/textmode.accurate.js"
   }
 }

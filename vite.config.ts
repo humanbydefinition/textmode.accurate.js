@@ -8,9 +8,9 @@ export default defineConfig(() => {
       alias: {
         'textmode.accurate.js': path.resolve(__dirname, 'src/index.ts'),
       },
-      server: {
-        open: '/examples/index.html',
-      },
+    },
+    server: {
+      open: '/examples/esm/index.html',
     },
     build: {
       minify: 'esbuild',

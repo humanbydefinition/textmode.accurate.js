@@ -1,12 +1,11 @@
-import type { TextmodePlugin, Shader, TextmodeConversionStrategy } from 'textmode.js';
-import {
-	registerConversionStrategy,
-	unregisterConversionStrategy,
-} from 'textmode.js';
+import { TextmodeShader } from 'textmode.js';
 import accurateFragmentShader from './shaders/image-to-mrt-accurate.frag?raw';
+import { TextmodeConversionStrategy } from 'textmode.js/conversion';
+import { TextmodePlugin } from 'textmode.js/plugins';
 
 const strategyId = 'accurate';
-let accurateShader: Shader | null = null;
+let accurateShader: TextmodeShader | null = null;
+let textmodifierInstance: any = null;
 
 const accurateStrategy: TextmodeConversionStrategy = {
 	id: strategyId,
@@ -15,12 +14,13 @@ const accurateStrategy: TextmodeConversionStrategy = {
 		return accurateShader;
 	},
 
-	createUniforms({ source, font, gridWidth, gridHeight }) {
+	createUniforms(context) {
+		const { source, font } = context;
 		const uniforms = source.createBaseConversionUniforms();
 		Object.assign(uniforms, {
 			u_characterTexture: font.fontFramebuffer,
 			u_charsetDimensions: [font.textureColumns, font.textureRows],
-			u_imageCellDimensions: [gridWidth, gridHeight],
+			u_imageCellDimensions: [source.width, source.height],
 			u_sampleGridSize: font.fontSize,
 		});
 		return uniforms;
@@ -41,20 +41,21 @@ export const createAccurateConversionPlugin = (): TextmodePlugin => ({
 	 * @param textmodifier The textmodifier instance to install the plugin into.
 	 */
 	async install(textmodifier) {
+		textmodifierInstance = textmodifier;
 		accurateShader = await textmodifier.createFilterShader(accurateFragmentShader);
-		registerConversionStrategy(accurateStrategy);
-
+		textmodifier.conversions.register(accurateStrategy);
 	},
 
 	/**
 	 * Uninstalls the accurate conversion strategy from textmode.js.
 	 */
 	async uninstall() {
-		unregisterConversionStrategy(strategyId);
-		if (accurateShader) {
-			accurateShader.dispose();
-			accurateShader = null;
+		if (textmodifierInstance) {
+			// ConversionManager handles shader disposal internally
+			textmodifierInstance.conversions.unregister(strategyId);
+			textmodifierInstance = null;
 		}
+		accurateShader = null;
 	},
 });
 
@@ -62,4 +63,4 @@ if (typeof window !== 'undefined') {
 	(window as any).createAccurateConversionPlugin = createAccurateConversionPlugin;
 }
 
-export type { TextmodeConversionStrategy } from 'textmode.js';
+export type { TextmodeConversionStrategy } from 'textmode.js/conversion';

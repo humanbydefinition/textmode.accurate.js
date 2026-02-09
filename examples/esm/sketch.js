@@ -30,6 +30,7 @@ t.setup(async () => {
 
 t.draw(() => {
 	t.background(0);
+	t.ortho();
 	t.image(video);
 });
 

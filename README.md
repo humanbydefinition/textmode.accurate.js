@@ -20,6 +20,9 @@
 
 `textmode.accurate.js` is an add-on library for `textmode.js` that restores an accurate, multi-sample glyph matching conversion mode. It registers a new `accurate` conversion strategy next to the built-in `brightness` mode, making image, video, and texture sources choose glyphs from sampled cell shape instead of average brightness alone.
 
+> [!WARNING]  
+> The `accurate` conversion mode is more computationally expensive than the default `brightness` mode. It may not be suitable for all use cases, especially on lower-end devices.
+
 ## Features
 
 - Add an `accurate` conversion mode through the standard `textmode.js` plugin system

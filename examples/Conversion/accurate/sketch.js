@@ -31,7 +31,7 @@ function drawLabel(text, y, color = [255, 255, 255]) {
 
 t.setup(async () => {
 	video = await t.loadVideo(VIDEO_URL);
-	video.characters(' .,:;irsXA253hMHGS#9B&@');
+	video.characters(t.font.characters.map((entry) => entry.character).join(''));
 	video.conversionMode('accurate');
 	video.charColorMode('sampled');
 	video.cellColorMode('sampled');

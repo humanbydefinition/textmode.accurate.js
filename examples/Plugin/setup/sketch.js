@@ -5,7 +5,7 @@
 const t = textmode.create({
 	width: window.innerWidth,
 	height: window.innerHeight,
-	fontSize: 12,
+	fontSize: 16,
 	plugins: [AccurateConversionPlugin],
 });
 
@@ -54,7 +54,9 @@ function drawLabel(text, y, color = [255, 255, 255]) {
 t.setup(() => {
 	source = t.createTexture(createSourceCanvas());
 	source.conversionMode('accurate');
-	source.characters(' .:-=+*#%@');
+	source.characters(t.font.characters.map((entry) => entry.character).join(''));
+	source.charColorMode('sampled');
+	source.cellColorMode('sampled');
 });
 
 t.draw(() => {

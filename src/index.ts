@@ -1,66 +1,88 @@
-import { TextmodeShader } from 'textmode.js';
+/**
+ * `textmode.accurate.js` package entrypoint.
+ *
+ * @packageDocumentation
+ */
+
+import type { TextmodeShader } from 'textmode.js';
+import type { TextmodeConversionContext, TextmodeConversionStrategy } from 'textmode.js/conversion';
+import type { TextmodePlugin, TextmodePluginContext } from 'textmode.js/plugins';
+import packageJson from '../package.json';
+
 import accurateFragmentShader from './shaders/image-to-mrt-accurate.frag?raw';
-import { TextmodeConversionStrategy } from 'textmode.js/conversion';
-import { TextmodePlugin } from 'textmode.js/plugins';
 
-const strategyId = 'accurate';
-let accurateShader: TextmodeShader | null = null;
-let textmodifierInstance: any = null;
+const ACCURATE_CONVERSION_MODE = 'accurate';
 
-const accurateStrategy: TextmodeConversionStrategy = {
-	id: strategyId,
+type ConversionUniforms = ReturnType<TextmodeConversionStrategy['createUniforms']>;
+type BaseConversionSource = TextmodeConversionContext['source'] & {
+	createBaseConversionUniforms(): ConversionUniforms;
+};
 
-	createShader() {
-		return accurateShader;
+function createAccurateUniforms(context: TextmodeConversionContext) {
+	const { source, glyphAtlas } = context;
+	const uniforms = (source as BaseConversionSource).createBaseConversionUniforms();
+
+	Object.assign(uniforms, {
+		u_characterTexture: glyphAtlas.framebuffer,
+		u_charsetDimensions: [glyphAtlas.columns, glyphAtlas.rows],
+		u_imageCellDimensions: [source.width, source.height],
+		u_sampleGridSize: Math.max(glyphAtlas.cellWidth, glyphAtlas.cellHeight),
+	});
+
+	return uniforms;
+}
+
+function createAccurateStrategy(shader: TextmodeShader): TextmodeConversionStrategy {
+	return {
+		id: ACCURATE_CONVERSION_MODE,
+
+		createShader() {
+			return shader;
+		},
+
+		createUniforms: createAccurateUniforms,
+	};
+}
+
+/**
+ * The `textmode.accurate.js` plugin to install.
+ *
+ * Install this plugin to enable the `accurate` conversion mode on image,
+ * video, and texture sources.
+ *
+ * @example
+ * ```javascript
+ * import { textmode } from 'textmode.js';
+ * import { AccurateConversionPlugin } from 'textmode.accurate.js';
+ *
+ * const t = textmode.create({
+ *   width: 800,
+ *   height: 600,
+ *   plugins: [AccurateConversionPlugin],
+ * });
+ *
+ * t.setup(async () => {
+ *   const image = await t.loadImage('photo.jpg');
+ *   image.conversionMode('accurate');
+ * });
+ * ```
+ */
+export const AccurateConversionPlugin: TextmodePlugin = {
+	name: packageJson.name,
+	version: packageJson.version,
+
+	async install(textmodifier, _context: TextmodePluginContext): Promise<void> {
+		const shader = await textmodifier.createFilterShader(accurateFragmentShader);
+		textmodifier.conversions.register(createAccurateStrategy(shader));
 	},
 
-	createUniforms(context) {
-		const { source, font } = context;
-		const uniforms = source.createBaseConversionUniforms();
-		Object.assign(uniforms, {
-			u_characterTexture: font.fontFramebuffer,
-			u_charsetDimensions: [font.textureColumns, font.textureRows],
-			u_imageCellDimensions: [source.width, source.height],
-			u_sampleGridSize: font.fontSize,
-		});
-		return uniforms;
+	uninstall(textmodifier, _context: TextmodePluginContext): void {
+		textmodifier.conversions.unregister(ACCURATE_CONVERSION_MODE);
 	},
 };
 
-/**
- * Creates a textmode.js plugin that provides an accurate glyph matching conversion strategy.
- * @returns A textmode.js plugin instance.
- */
-export const createAccurateConversionPlugin = (): TextmodePlugin => ({
-	name: 'textmode.accurate',
-
-	version: '1.0.0',
-
-	/**
-	 * Installs the accurate conversion strategy into textmode.js.
-	 * @param textmodifier The textmodifier instance to install the plugin into.
-	 */
-	async install(textmodifier) {
-		textmodifierInstance = textmodifier;
-		accurateShader = await textmodifier.createFilterShader(accurateFragmentShader);
-		textmodifier.conversions.register(accurateStrategy);
-	},
-
-	/**
-	 * Uninstalls the accurate conversion strategy from textmode.js.
-	 */
-	async uninstall() {
-		if (textmodifierInstance) {
-			// ConversionManager handles shader disposal internally
-			textmodifierInstance.conversions.unregister(strategyId);
-			textmodifierInstance = null;
-		}
-		accurateShader = null;
-	},
-});
+export type { TextmodeConversionStrategy } from 'textmode.js/conversion';
 
 if (typeof window !== 'undefined') {
-	(window as any).createAccurateConversionPlugin = createAccurateConversionPlugin;
+	(window as typeof window & Record<string, unknown>).AccurateConversionPlugin = AccurateConversionPlugin;
 }
-
-export type { TextmodeConversionStrategy } from 'textmode.js/conversion';

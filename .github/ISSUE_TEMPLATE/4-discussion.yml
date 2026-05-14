@@ -1,0 +1,11 @@
+name: Discussion
+description: Start a design or usage discussion.
+title: '[Discussion]: '
+labels: ['discussion']
+body:
+    - type: textarea
+      id: topic
+      attributes:
+          label: Topic
+      validations:
+          required: true

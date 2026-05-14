@@ -1,0 +1,18 @@
+name: Feature request
+description: Request a new capability for textmode.accurate.js.
+title: '[Feature]: '
+labels: ['feature']
+body:
+    - type: textarea
+      id: problem
+      attributes:
+          label: Problem
+          description: What would this help you do?
+      validations:
+          required: true
+    - type: textarea
+      id: solution
+      attributes:
+          label: Proposed solution
+      validations:
+          required: true

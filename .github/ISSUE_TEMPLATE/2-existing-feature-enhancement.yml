@@ -1,0 +1,17 @@
+name: Improve an existing feature
+description: Suggest an improvement to accurate conversion behavior or tooling.
+title: '[Enhancement]: '
+labels: ['enhancement']
+body:
+    - type: textarea
+      id: current
+      attributes:
+          label: Current behavior
+      validations:
+          required: true
+    - type: textarea
+      id: proposed
+      attributes:
+          label: Proposed behavior
+      validations:
+          required: true

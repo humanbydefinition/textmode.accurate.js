@@ -1,7 +1,7 @@
 {
 	"name": "textmode.accurate.js",
 	"version": "1.0.0",
-	"description": "Accurate glyph matching conversion plugin for textmode.js",
+	"description": "Accurate media conversion plugin for textmode.js",
 	"type": "module",
 	"main": "./dist/textmode.accurate.umd.js",
 	"module": "./dist/textmode.accurate.esm.js",
@@ -90,8 +90,7 @@
 		"art",
 		"graphics",
 		"ascii-art",
-		"conversion",
-		"glyph-matching"
+		"conversion"
 	],
 	"author": "humanbydefinition <hello@textmode.art> (https://code.textmode.art)",
 	"license": "MIT",

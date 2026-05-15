@@ -53,9 +53,8 @@ vec2 encodeCharIndex(int index) {
 
 vec3 fetchCharPaletteColor(int index) {
     int columns = max(u_charPaletteDimensions.x, 1);
-    int clampedIndex = clamp(index, 0, max(u_charCount - 1, 0));
-    int y = clampedIndex / columns;
-    int x = clampedIndex - y * columns;
+    int y = index / columns;
+    int x = index % columns;
     return texelFetch(u_charPaletteTexture, ivec2(x, y), 0).rgb;
 }
 

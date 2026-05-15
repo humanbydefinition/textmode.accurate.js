@@ -1,14 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { TextmodeConversionStrategy } from 'textmode.js/conversion';
+import type { TextmodeConversionStrategy } from 'textmode.js';
 
 import { AccurateConversionPlugin } from '../../../src';
 
 function createTextmodifierHarness() {
 	let registeredStrategy: TextmodeConversionStrategy | undefined;
+	let createdShaderSource = '';
 	const shader = { dispose: vi.fn() };
 
 	const textmodifier = {
-		createFilterShader: vi.fn(async () => shader),
+		createFilterShader: vi.fn(async (source: string) => {
+			createdShaderSource = source;
+			return shader;
+		}),
 		conversions: {
 			register: vi.fn((strategy: TextmodeConversionStrategy) => {
 				registeredStrategy = strategy;
@@ -21,6 +25,7 @@ function createTextmodifierHarness() {
 		shader,
 		textmodifier,
 		getRegisteredStrategy: () => registeredStrategy,
+		getCreatedShaderSource: () => createdShaderSource,
 	};
 }
 
@@ -31,9 +36,13 @@ describe('AccurateConversionPlugin integration', () => {
 		await AccurateConversionPlugin.install(harness.textmodifier as never, {} as never);
 
 		const strategy = harness.getRegisteredStrategy();
-		expect(harness.textmodifier.createFilterShader).toHaveBeenCalledWith(
-			expect.stringContaining('u_sampleGridSize')
-		);
+		const shaderSource = harness.getCreatedShaderSource();
+
+		expect(shaderSource).toContain('u_sampleGridSize');
+		expect(shaderSource).toContain('u_charPaletteTexture');
+		expect(shaderSource).toContain('u_charPaletteDimensions');
+		expect(shaderSource).toContain('texelFetch');
+		expect(shaderSource).not.toContain('u_charList');
 		expect(harness.textmodifier.conversions.register).toHaveBeenCalledTimes(1);
 		expect(strategy?.id).toBe('accurate');
 		expect(strategy?.createShader({} as never)).toBe(harness.shader);
@@ -49,7 +58,12 @@ describe('AccurateConversionPlugin integration', () => {
 		await AccurateConversionPlugin.install(harness.textmodifier as never, {} as never);
 
 		const strategy = harness.getRegisteredStrategy();
-		const baseUniforms = { u_image: 'image-texture' };
+		const baseUniforms = {
+			u_image: 'image-texture',
+			u_charCount: 512,
+			u_charPaletteTexture: 'palette-texture',
+			u_charPaletteDimensions: [23, 23],
+		};
 		const source = {
 			width: 80,
 			height: 45,
@@ -68,6 +82,9 @@ describe('AccurateConversionPlugin integration', () => {
 		expect(source.createBaseConversionUniforms).toHaveBeenCalledTimes(1);
 		expect(uniforms).toMatchObject({
 			u_image: 'image-texture',
+			u_charCount: 512,
+			u_charPaletteTexture: 'palette-texture',
+			u_charPaletteDimensions: [23, 23],
 			u_characterTexture: 'font-framebuffer',
 			u_charsetDimensions: [16, 16],
 			u_imageCellDimensions: [80, 45],

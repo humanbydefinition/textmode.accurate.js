@@ -59,6 +59,7 @@
 				window.AccurateConversionPlugin = accurateModule.AccurateConversionPlugin;
 
 				const script = document.createElement('script');
+				script.type = 'module';
 				script.src = `./${examplePath}/sketch.js`;
 				script.onerror = () => showError(`Unable to load ${examplePath}.`);
 				document.body.appendChild(script);

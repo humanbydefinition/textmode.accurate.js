@@ -5,8 +5,8 @@
  */
 
 import type { TextmodeShader } from 'textmode.js';
-import type { TextmodeConversionContext, TextmodeConversionStrategy } from 'textmode.js/conversion';
-import type { TextmodePlugin, TextmodePluginContext } from 'textmode.js/plugins';
+import type { TextmodeConversionContext, TextmodeConversionStrategy } from 'textmode.js';
+import type { TextmodePlugin, TextmodePluginContext } from 'textmode.js';
 import packageJson from '../package.json';
 
 import accurateFragmentShader from './shaders/image-to-mrt-accurate.frag?raw';
@@ -81,7 +81,7 @@ export const AccurateConversionPlugin: TextmodePlugin = {
 	},
 };
 
-export type { TextmodeConversionStrategy } from 'textmode.js/conversion';
+export type { TextmodeConversionStrategy } from 'textmode.js';
 
 if (typeof window !== 'undefined') {
 	(window as typeof window & Record<string, unknown>).AccurateConversionPlugin = AccurateConversionPlugin;

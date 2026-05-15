@@ -15,7 +15,8 @@ uniform bool u_cellColorFixed;
 uniform vec4 u_cellColor;
 uniform vec4 u_backgroundColor;
 uniform int u_charCount;
-uniform vec3 u_charList[255];
+uniform sampler2D u_charPaletteTexture;
+uniform ivec2 u_charPaletteDimensions;
 uniform bool u_colorFilterEnabled;
 uniform int u_colorFilterSize;
 uniform vec4 u_colorFilterPalette[64];
@@ -32,7 +33,6 @@ layout(location = 2) out vec4 o_secondaryColor;
 
 const float ALPHA_EPSILON = 0.01;
 const int MAX_SAMPLE_STEPS = 16;
-const int MAX_CHARACTERS = 255;
 const int MAX_GRID_SAMPLES = MAX_SAMPLE_STEPS * MAX_SAMPLE_STEPS;
 
 float luminance(vec3 c) {
@@ -49,6 +49,14 @@ vec2 encodeCharIndex(int index) {
     float lower = float(index & 255) / 255.0;
     float upper = float((index >> 8) & 255) / 255.0;
     return vec2(lower, upper);
+}
+
+vec3 fetchCharPaletteColor(int index) {
+    int columns = max(u_charPaletteDimensions.x, 1);
+    int clampedIndex = clamp(index, 0, max(u_charCount - 1, 0));
+    int y = clampedIndex / columns;
+    int x = clampedIndex - y * columns;
+    return texelFetch(u_charPaletteTexture, ivec2(x, y), 0).rgb;
 }
 
 float colorDistance(vec3 a, vec3 b) {
@@ -166,18 +174,13 @@ void main() {
     vec2 glyphCounts = vec2(max(u_charsetDimensions.x, 1), max(u_charsetDimensions.y, 1));
     vec2 glyphCellSize = 1.0 / glyphCounts;
 
-    vec2 defaultEncoded = u_charCount > 0 ? u_charList[0].xy : encodeCharIndex(0);
+    vec2 defaultEncoded = u_charCount > 0 ? fetchCharPaletteColor(0).xy : encodeCharIndex(0);
     vec2 bestEncoded = defaultEncoded;
     float bestError = 1.0e20;
 
     if (u_charCount > 0) {
-        int clampedCharCount = int(min(float(u_charCount), float(MAX_CHARACTERS)));
-        for (int charIdx = 0; charIdx < MAX_CHARACTERS; ++charIdx) {
-            if (charIdx >= clampedCharCount) {
-                break;
-            }
-
-            vec3 paletteColor = u_charList[charIdx];
+        for (int charIdx = 0; charIdx < u_charCount; ++charIdx) {
+            vec3 paletteColor = fetchCharPaletteColor(charIdx);
             int glyphIndex = decodeCharIndex(paletteColor);
 
             int glyphRow = glyphIndex / max(u_charsetDimensions.x, 1);
@@ -216,7 +219,7 @@ void main() {
     }
 
     if (!hasOpaqueSample) {
-        bestEncoded = (u_charCount > 0) ? u_charList[0].xy : encodeCharIndex(0);
+        bestEncoded = (u_charCount > 0) ? fetchCharPaletteColor(0).xy : encodeCharIndex(0);
         charCol = u_backgroundColor;
         cellCol = u_backgroundColor;
     }

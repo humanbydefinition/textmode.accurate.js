@@ -37,7 +37,7 @@
 
 To get started with `textmode.accurate.js`, you'll need:
 
-- `textmode.js` `0.10.0` or newer
+- `textmode.js` `0.13.0` or newer
 - A modern browser with WebGL2 support
 - Node.js `20.8.1+` and `npm` for ESM installation
 

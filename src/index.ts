@@ -18,9 +18,19 @@ type BaseConversionSource = TextmodeConversionContext['source'] & {
 	createBaseConversionUniforms(): ConversionUniforms;
 };
 
+function ensureBrightnessRangeUniforms(uniforms: ConversionUniforms): void {
+	if (uniforms.u_brightnessStart === undefined) {
+		uniforms.u_brightnessStart = 0;
+	}
+	if (uniforms.u_brightnessEnd === undefined) {
+		uniforms.u_brightnessEnd = 1;
+	}
+}
+
 function createAccurateUniforms(context: TextmodeConversionContext) {
 	const { source, glyphAtlas } = context;
 	const uniforms = (source as BaseConversionSource).createBaseConversionUniforms();
+	ensureBrightnessRangeUniforms(uniforms);
 
 	Object.assign(uniforms, {
 		u_characterTexture: glyphAtlas.framebuffer,

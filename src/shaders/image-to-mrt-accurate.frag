@@ -9,6 +9,8 @@ uniform bool u_invert;
 uniform bool u_flipX;
 uniform bool u_flipY;
 uniform float u_charRotation;
+uniform float u_brightnessStart;
+uniform float u_brightnessEnd;
 uniform bool u_charColorFixed;
 uniform vec4 u_charColor;
 uniform bool u_cellColorFixed;
@@ -134,6 +136,9 @@ void main() {
     }
 
     float avgBrightness = sampleCount > 0 ? brightnessSum / float(sampleCount) : 0.0;
+    if(avgBrightness < u_brightnessStart || avgBrightness > u_brightnessEnd) {
+        discard;
+    }
 
     vec3 primaryAccum = vec3(0.0);
     vec3 secondaryAccum = vec3(0.0);

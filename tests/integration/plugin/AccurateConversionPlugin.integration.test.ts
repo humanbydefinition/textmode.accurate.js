@@ -41,6 +41,15 @@ describe('AccurateConversionPlugin integration', () => {
 		expect(shaderSource).toContain('u_sampleGridSize');
 		expect(shaderSource).toContain('u_charPaletteTexture');
 		expect(shaderSource).toContain('u_charPaletteDimensions');
+		expect(shaderSource).toContain('uniform float u_brightnessStart');
+		expect(shaderSource).toContain('uniform float u_brightnessEnd');
+		expect(shaderSource).toContain('avgBrightness < u_brightnessStart || avgBrightness > u_brightnessEnd');
+		expect(shaderSource.indexOf('avgBrightness < u_brightnessStart')).toBeGreaterThan(
+			shaderSource.indexOf('float avgBrightness')
+		);
+		expect(shaderSource.indexOf('avgBrightness < u_brightnessStart')).toBeLessThan(
+			shaderSource.indexOf('vec3 primaryAccum')
+		);
 		expect(shaderSource).toContain('texelFetch');
 		expect(shaderSource).not.toContain('u_charList');
 		expect(harness.textmodifier.conversions.register).toHaveBeenCalledTimes(1);
@@ -63,6 +72,8 @@ describe('AccurateConversionPlugin integration', () => {
 			u_charCount: 512,
 			u_charPaletteTexture: 'palette-texture',
 			u_charPaletteDimensions: [23, 23],
+			u_brightnessStart: 0.25,
+			u_brightnessEnd: 0.75,
 		};
 		const source = {
 			width: 80,
@@ -85,10 +96,44 @@ describe('AccurateConversionPlugin integration', () => {
 			u_charCount: 512,
 			u_charPaletteTexture: 'palette-texture',
 			u_charPaletteDimensions: [23, 23],
+			u_brightnessStart: 0.25,
+			u_brightnessEnd: 0.75,
 			u_characterTexture: 'font-framebuffer',
 			u_charsetDimensions: [16, 16],
 			u_imageCellDimensions: [80, 45],
 			u_sampleGridSize: 10,
+		});
+	});
+
+	it('defaults brightness range uniforms for older core versions', async () => {
+		const harness = createTextmodifierHarness();
+
+		await AccurateConversionPlugin.install(harness.textmodifier as never, {} as never);
+
+		const strategy = harness.getRegisteredStrategy();
+		const source = {
+			width: 80,
+			height: 45,
+			createBaseConversionUniforms: vi.fn(() => ({
+				u_image: 'image-texture',
+				u_charCount: 512,
+				u_charPaletteTexture: 'palette-texture',
+				u_charPaletteDimensions: [23, 23],
+			})),
+		};
+		const font = {
+			framebuffer: 'font-framebuffer',
+			columns: 16,
+			rows: 16,
+			cellWidth: 8,
+			cellHeight: 10,
+		};
+
+		const uniforms = strategy?.createUniforms({ source, glyphAtlas: font } as never);
+
+		expect(uniforms).toMatchObject({
+			u_brightnessStart: 0,
+			u_brightnessEnd: 1,
 		});
 	});
 });

@@ -2,12 +2,16 @@ name: CI
 
 on:
     pull_request:
-        branches: [main, beta]
+        branches: [dev, beta, main]
     push:
-        branches: [main, beta]
+        branches: [dev, beta, main]
 
-env:
-    CI_NODE_VERSION: 24
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
 
 jobs:
     check:
@@ -16,13 +20,16 @@ jobs:
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v7
               with:
-                  node-version: ${{ env.CI_NODE_VERSION }}
+                  node-version-file: .nvmrc
                   cache: 'npm'
+
+            - name: Report toolchain
+              run: node --version && npm --version
 
             - name: Install dependencies
               run: npm ci
@@ -34,7 +41,7 @@ jobs:
         name: Release
         needs: check
         runs-on: ubuntu-latest
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/beta' || github.ref == 'refs/heads/main')
         environment:
             name: npm-publish
 
@@ -46,16 +53,19 @@ jobs:
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
               with:
                   fetch-depth: 0
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Setup Node.js
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v7
               with:
-                  node-version: ${{ env.CI_NODE_VERSION }}
+                  node-version-file: .nvmrc
                   cache: 'npm'
+
+            - name: Report toolchain
+              run: node --version && npm --version
 
             - name: Install dependencies
               run: npm ci
@@ -63,5 +73,7 @@ jobs:
             - name: Release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  HUSKY: '0'
-              run: npx semantic-release
+                  GIT_CONFIG_COUNT: '1'
+                  GIT_CONFIG_KEY_0: core.hooksPath
+                  GIT_CONFIG_VALUE_0: /dev/null
+              run: npm run release

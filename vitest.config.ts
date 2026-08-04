@@ -1,36 +1,23 @@
 import path from 'path';
-import { defineConfig, defineProject } from 'vitest/config';
 
-const sharedTestConfig = {
-	environment: 'jsdom' as const,
-	globals: true,
-};
+import { defineTextmodeProject } from '@textmode/vitest-config';
 
-export default defineConfig({
-	root: __dirname,
-	test: {
-		...sharedTestConfig,
-		projects: [
-			defineProject({
-				test: {
-					...sharedTestConfig,
-					name: 'unit',
-					include: ['tests/unit/**/*.test.ts'],
-				},
-			}),
-			defineProject({
-				test: {
-					...sharedTestConfig,
-					name: 'integration',
-					include: ['tests/integration/**/*.test.ts'],
-				},
-			}),
-		],
-	},
-	resolve: {
-		alias: {
-			'textmode.accurate.js': path.resolve(__dirname, 'src/index.ts'),
-			'@': path.resolve(__dirname, 'src'),
+export default defineTextmodeProject({
+	projects: [
+		{
+			test: {
+				name: 'unit',
+				include: ['tests/unit/**/*.test.ts'],
+			},
 		},
+		{
+			test: {
+				name: 'integration',
+				include: ['tests/integration/**/*.test.ts'],
+			},
+		},
+	],
+	alias: {
+		'textmode.accurate.js': path.resolve(__dirname, 'src/index.ts'),
 	},
 });

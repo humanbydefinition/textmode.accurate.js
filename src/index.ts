@@ -93,6 +93,8 @@ function createAccurateStrategy(shader: TextmodeShader): TextmodeConversionStrat
  *   image.conversionMode('accurate');
  * });
  * ```
+ *
+ * @see {@link https://code.textmode.art/api/textmode.accurate.js/variables/AccurateConversionPlugin | AccurateConversionPlugin API reference}
  */
 export const AccurateConversionPlugin: TextmodePlugin = {
 	name: packageJson.name,
@@ -107,8 +109,6 @@ export const AccurateConversionPlugin: TextmodePlugin = {
 		textmodifier.conversions.unregister(ACCURATE_CONVERSION_MODE);
 	},
 };
-
-export type { TextmodeConversionStrategy } from 'textmode.js';
 
 if (typeof window !== 'undefined') {
 	(window as typeof window & Record<string, unknown>).AccurateConversionPlugin = AccurateConversionPlugin;

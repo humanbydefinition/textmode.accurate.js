@@ -1,0 +1,33 @@
+{
+	"version": 1,
+	"description": "Accurate media conversion plugin for textmode.js examples manifest",
+	"groups": [
+		{
+			"name": "AccurateConversionPlugin",
+			"description": "Plugin installation and accurate conversion mode usage on a textmode sketch",
+			"examples": [
+				{
+					"title": "AccurateConversionPlugin.setup",
+					"sourceFile": "examples/Plugin/setup/sketch.js",
+					"status": "unrated"
+				}
+			]
+		},
+		{
+			"name": "Conversion",
+			"description": "Accurate glyph-matching conversion on image, video, and texture sources",
+			"examples": [
+				{
+					"title": "Conversion.accurate",
+					"sourceFile": "examples/Conversion/accurate/sketch.js",
+					"status": "unrated"
+				},
+				{
+					"title": "Conversion.comparison",
+					"sourceFile": "examples/Conversion/comparison/sketch.js",
+					"status": "unrated"
+				}
+			]
+		}
+	]
+}

@@ -1,13 +1,16 @@
 /**
- * @title Plugin setup
+ * @title AccurateConversionPlugin.setup
  * @author humanbydefinition
  */
+
 const t = textmode.create({
 	width: window.innerWidth,
 	height: window.innerHeight,
 	fontSize: 16,
 	plugins: [AccurateConversionPlugin],
 });
+
+const labelLayer = t.layers.add();
 
 let source;
 
@@ -35,19 +38,11 @@ function createSourceCanvas() {
 	return canvas;
 }
 
-function drawLabel(text, y, color = [255, 255, 255]) {
+function drawText(text, x, y, r = 220, g = 230, b = 255) {
 	t.push();
-	t.translate(-Math.floor(text.length / 2), y);
-	t.charColor(color[0], color[1], color[2]);
-
-	for (let i = 0; i < text.length; i++) {
-		t.push();
-		t.translate(i, 0);
-		t.char(text[i]);
-		t.point();
-		t.pop();
-	}
-
+	t.printAlign('left', 'top');
+	t.charColor(r, g, b);
+	t.print(text, x, y);
 	t.pop();
 }
 
@@ -59,17 +54,26 @@ t.setup(() => {
 	source.cellColorMode('sampled');
 });
 
+labelLayer.draw(() => {
+	t.clear();
+	const left = -Math.floor(t.grid.cols / 2);
+	const top = -Math.floor(t.grid.rows / 2);
+	let y = top + 3;
+	const x = left + 3;
+
+	drawText('ACCURATECONVERSIONPLUGIN.SETUP', x, y++, 255, 225, 140);
+	drawText('------------------------------------', x, y++, 80, 100, 150);
+	drawText('CONCEPT: PLUGIN INSTALLATION', x, y++, 100, 220, 255);
+	drawText('Registers the accurate strategy.', x, y++, 140, 160, 190);
+	drawText('------------------------------------', x, y++, 80, 100, 150);
+	const registered = t.conversions.has('accurate');
+	drawText(`accurate = ${registered}`, x, y++, 140, 200, 255);
+});
+
 t.draw(() => {
 	t.background(5, 8, 18);
 	if (!source) return;
-
 	t.image(source, t.grid.cols - 10, t.grid.rows - 10);
-	drawLabel('plugins: [AccurateConversionPlugin]', Math.floor(t.grid.rows / 2) - 4, [255, 225, 140]);
-	drawLabel(
-		`conversions.has('accurate') = ${t.conversions.has('accurate')}`,
-		Math.floor(t.grid.rows / 2),
-		[140, 200, 255]
-	);
 });
 
 t.windowResized(() => {

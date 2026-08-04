@@ -13,33 +13,50 @@ import accurateFragmentShader from './shaders/image-to-mrt-accurate.frag?raw';
 
 const ACCURATE_CONVERSION_MODE = 'accurate';
 
-type ConversionUniforms = ReturnType<TextmodeConversionStrategy['createUniforms']>;
-type BaseConversionSource = TextmodeConversionContext['source'] & {
-	createBaseConversionUniforms(): ConversionUniforms;
-};
+const BASE_UNIFORM_BEFORE_BRIGHTNESS = 'u_charRotation';
+const BASE_UNIFORM_AFTER_BRIGHTNESS = 'u_charColorFixed';
 
-function ensureBrightnessRangeUniforms(uniforms: ConversionUniforms): void {
-	if (uniforms.u_brightnessStart === undefined) {
-		uniforms.u_brightnessStart = 0;
+function getAccurateBrightnessRange(baseUniforms: Record<string, unknown>): [number, number] {
+	const brightnessStart = baseUniforms.u_brightnessStart;
+	const brightnessEnd = baseUniforms.u_brightnessEnd;
+
+	if (typeof brightnessStart === 'number' && typeof brightnessEnd === 'number') {
+		return [brightnessStart, brightnessEnd];
 	}
-	if (uniforms.u_brightnessEnd === undefined) {
-		uniforms.u_brightnessEnd = 1;
+
+	// textmode.js 0.17's production build currently minifies these two keys even
+	// though createBaseUniforms() exposes them as part of its public contract. Read
+	// their stable position between rotation and color-mode uniforms without
+	// depending on build-specific minified names such as "U6" and "U5".
+	const entries = Object.entries(baseUniforms);
+	const beforeIndex = entries.findIndex(([key]) => key === BASE_UNIFORM_BEFORE_BRIGHTNESS);
+	const afterIndex = entries.findIndex(([key]) => key === BASE_UNIFORM_AFTER_BRIGHTNESS);
+	const hiddenBrightnessValues = entries
+		.slice(beforeIndex + 1, afterIndex)
+		.map(([, value]) => value)
+		.filter((value): value is number => typeof value === 'number');
+
+	if (beforeIndex >= 0 && afterIndex > beforeIndex && hiddenBrightnessValues.length === 2) {
+		return [hiddenBrightnessValues[0], hiddenBrightnessValues[1]];
 	}
+
+	return [0, 1];
 }
 
 function createAccurateUniforms(context: TextmodeConversionContext) {
 	const { source, glyphAtlas } = context;
-	const uniforms = (source as BaseConversionSource).createBaseConversionUniforms();
-	ensureBrightnessRangeUniforms(uniforms);
+	const baseUniforms = context.createBaseUniforms();
+	const [brightnessStart, brightnessEnd] = getAccurateBrightnessRange(baseUniforms);
 
-	Object.assign(uniforms, {
+	return {
+		...baseUniforms,
+		u_accurateBrightnessStart: brightnessStart,
+		u_accurateBrightnessEnd: brightnessEnd,
 		u_characterTexture: glyphAtlas.framebuffer,
 		u_charsetDimensions: [glyphAtlas.columns, glyphAtlas.rows],
 		u_imageCellDimensions: [source.width, source.height],
 		u_sampleGridSize: Math.max(glyphAtlas.cellWidth, glyphAtlas.cellHeight),
-	});
-
-	return uniforms;
+	};
 }
 
 function createAccurateStrategy(shader: TextmodeShader): TextmodeConversionStrategy {
@@ -57,8 +74,8 @@ function createAccurateStrategy(shader: TextmodeShader): TextmodeConversionStrat
 /**
  * The `textmode.accurate.js` plugin to install.
  *
- * Install this plugin to enable the `accurate` conversion mode on image,
- * video, and texture sources.
+ * Install this plugin to enable the `accurate` conversion mode for image and
+ * video sources rendered with `image()`.
  *
  * @example
  * ```javascript
@@ -82,7 +99,7 @@ export const AccurateConversionPlugin: TextmodePlugin = {
 	version: packageJson.version,
 
 	async install(textmodifier, _context: TextmodePluginContext): Promise<void> {
-		const shader = await textmodifier.createFilterShader(accurateFragmentShader);
+		const shader = await textmodifier.createMaterialShader(accurateFragmentShader);
 		textmodifier.conversions.register(createAccurateStrategy(shader));
 	},
 

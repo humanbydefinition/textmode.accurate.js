@@ -37,7 +37,7 @@
 
 To get started with `textmode.accurate.js`, you'll need:
 
-- `textmode.js` `0.13.0` or newer
+- `textmode.js` `0.17.1-beta.1` or newer within the `0.17` release line
 - A modern browser with WebGL2 support
 - Node.js `20.8.1+` and `npm` for ESM installation
 
@@ -130,6 +130,8 @@ t.draw(() => {
 ```
 
 The built-in `brightness` mode chooses glyphs from average luminance. The `accurate` mode samples each cell in a grid, compares candidate glyph masks against the source-cell shape, and keeps the closest glyph match.
+
+Use accurate sources with `image()`. The core `texture()` geometry path supports only the built-in `brightness` conversion mode.
 
 ## Documentation
 

@@ -9,8 +9,8 @@ function createTextmodifierHarness() {
 	const shader = { dispose: vi.fn() };
 
 	const textmodifier = {
-		createFilterShader: vi.fn(async (source: string) => {
-			createdShaderSource = source;
+		createMaterialShader: vi.fn(async (fragmentSource: string) => {
+			createdShaderSource = fragmentSource;
 			return shader;
 		}),
 		conversions: {
@@ -38,20 +38,35 @@ describe('AccurateConversionPlugin integration', () => {
 		const strategy = harness.getRegisteredStrategy();
 		const shaderSource = harness.getCreatedShaderSource();
 
+		expect(harness.textmodifier.createMaterialShader).toHaveBeenCalledTimes(1);
 		expect(shaderSource).toContain('u_sampleGridSize');
 		expect(shaderSource).toContain('u_charPaletteTexture');
 		expect(shaderSource).toContain('u_charPaletteDimensions');
-		expect(shaderSource).toContain('uniform float u_brightnessStart');
-		expect(shaderSource).toContain('uniform float u_brightnessEnd');
-		expect(shaderSource).toContain('avgBrightness < u_brightnessStart || avgBrightness > u_brightnessEnd');
-		expect(shaderSource.indexOf('avgBrightness < u_brightnessStart')).toBeGreaterThan(
+		expect(shaderSource).toContain('in vec3 v_worldPosition');
+		expect(shaderSource).toContain('tmApplyLighting');
+		expect(shaderSource).not.toContain('u_colorFilterEnabled');
+		expect(shaderSource).not.toContain('u_colorFilterPalette');
+		expect(shaderSource).not.toContain('uniform float u_brightnessStart');
+		expect(shaderSource).not.toContain('uniform float u_brightnessEnd');
+		expect(shaderSource).toContain('uniform float u_accurateBrightnessStart');
+		expect(shaderSource).toContain('uniform float u_accurateBrightnessEnd');
+		expect(shaderSource).toContain(
+			'avgBrightness < u_accurateBrightnessStart || avgBrightness > u_accurateBrightnessEnd'
+		);
+		expect(shaderSource.indexOf('avgBrightness < u_accurateBrightnessStart')).toBeGreaterThan(
 			shaderSource.indexOf('float avgBrightness')
 		);
-		expect(shaderSource.indexOf('avgBrightness < u_brightnessStart')).toBeLessThan(
+		expect(shaderSource.indexOf('avgBrightness < u_accurateBrightnessStart')).toBeLessThan(
 			shaderSource.indexOf('vec3 primaryAccum')
 		);
 		expect(shaderSource).toContain('texelFetch');
 		expect(shaderSource).not.toContain('u_charList');
+		expect(shaderSource).toContain('float splitMask[MAX_GRID_SAMPLES]');
+		expect(shaderSource).toContain('layout(location = 3) out vec4 o_statePayload');
+		expect(shaderSource).toContain('o_statePayload = vec4(0.0)');
+
+		const candidateLoop = shaderSource.slice(shaderSource.indexOf('for (int charIdx'));
+		expect(candidateLoop).not.toContain('texture(u_image');
 		expect(harness.textmodifier.conversions.register).toHaveBeenCalledTimes(1);
 		expect(strategy?.id).toBe('accurate');
 		expect(strategy?.createShader({} as never)).toBe(harness.shader);
@@ -61,7 +76,7 @@ describe('AccurateConversionPlugin integration', () => {
 		expect(harness.textmodifier.conversions.unregister).toHaveBeenCalledWith('accurate');
 	});
 
-	it('adds accurate conversion uniforms on top of source base uniforms', async () => {
+	it('adds accurate conversion uniforms on top of context base uniforms', async () => {
 		const harness = createTextmodifierHarness();
 
 		await AccurateConversionPlugin.install(harness.textmodifier as never, {} as never);
@@ -78,7 +93,6 @@ describe('AccurateConversionPlugin integration', () => {
 		const source = {
 			width: 80,
 			height: 45,
-			createBaseConversionUniforms: vi.fn(() => baseUniforms),
 		};
 		const font = {
 			framebuffer: 'font-framebuffer',
@@ -88,9 +102,10 @@ describe('AccurateConversionPlugin integration', () => {
 			cellHeight: 10,
 		};
 
-		const uniforms = strategy?.createUniforms({ source, glyphAtlas: font } as never);
+		const createBaseUniforms = vi.fn(() => baseUniforms);
+		const uniforms = strategy?.createUniforms({ source, glyphAtlas: font, createBaseUniforms } as never);
 
-		expect(source.createBaseConversionUniforms).toHaveBeenCalledTimes(1);
+		expect(createBaseUniforms).toHaveBeenCalledTimes(1);
 		expect(uniforms).toMatchObject({
 			u_image: 'image-texture',
 			u_charCount: 512,
@@ -98,6 +113,8 @@ describe('AccurateConversionPlugin integration', () => {
 			u_charPaletteDimensions: [23, 23],
 			u_brightnessStart: 0.25,
 			u_brightnessEnd: 0.75,
+			u_accurateBrightnessStart: 0.25,
+			u_accurateBrightnessEnd: 0.75,
 			u_characterTexture: 'font-framebuffer',
 			u_charsetDimensions: [16, 16],
 			u_imageCellDimensions: [80, 45],
@@ -105,7 +122,7 @@ describe('AccurateConversionPlugin integration', () => {
 		});
 	});
 
-	it('defaults brightness range uniforms for older core versions', async () => {
+	it('preserves conversion-stack base uniforms for the active pass', async () => {
 		const harness = createTextmodifierHarness();
 
 		await AccurateConversionPlugin.install(harness.textmodifier as never, {} as never);
@@ -114,12 +131,6 @@ describe('AccurateConversionPlugin integration', () => {
 		const source = {
 			width: 80,
 			height: 45,
-			createBaseConversionUniforms: vi.fn(() => ({
-				u_image: 'image-texture',
-				u_charCount: 512,
-				u_charPaletteTexture: 'palette-texture',
-				u_charPaletteDimensions: [23, 23],
-			})),
 		};
 		const font = {
 			framebuffer: 'font-framebuffer',
@@ -129,11 +140,34 @@ describe('AccurateConversionPlugin integration', () => {
 			cellHeight: 10,
 		};
 
-		const uniforms = strategy?.createUniforms({ source, glyphAtlas: font } as never);
+		const baseUniforms = {
+			u_image: 'stack-image-texture',
+			u_invert: false,
+			u_flipX: false,
+			u_flipY: false,
+			u_charRotation: 0,
+			U6: 0.25,
+			U5: 0.75,
+			u_charColorFixed: false,
+			u_charCount: 4,
+			u_charPaletteTexture: 'pass-palette-texture',
+			u_charPaletteDimensions: [2, 2],
+		};
+		const createBaseUniforms = vi.fn(() => baseUniforms);
+		const pass = { index: 1, count: 2, mode: 'accurate', options: { threshold: 0.12 } };
+
+		const uniforms = strategy?.createUniforms({ source, glyphAtlas: font, createBaseUniforms, pass } as never);
 
 		expect(uniforms).toMatchObject({
-			u_brightnessStart: 0,
-			u_brightnessEnd: 1,
+			u_image: 'stack-image-texture',
+			u_charPaletteTexture: 'pass-palette-texture',
+			u_charPaletteDimensions: [2, 2],
+			U6: 0.25,
+			U5: 0.75,
+			u_accurateBrightnessStart: 0.25,
+			u_accurateBrightnessEnd: 0.75,
 		});
+		expect(uniforms).toMatchObject(baseUniforms);
+		expect(createBaseUniforms).toHaveBeenCalledTimes(1);
 	});
 });

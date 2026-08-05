@@ -95,13 +95,3 @@ Contribution details and profile links are maintained on the [textmode.js contri
 ## License
 
 `textmode.accurate.js` is licensed under the [MIT License](./LICENSE).
-
----
-
-<div align="center">
-
-<br />
-
-**[↑ back to top](#textmodeaccuratejs)**
-
-</div>

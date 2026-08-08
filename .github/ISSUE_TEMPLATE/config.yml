@@ -6,9 +6,6 @@ contact_links:
     - name: API reference
       url: https://code.textmode.art/api/textmode.accurate.js/
       about: Check the generated API reference for the accurate conversion plugin.
-    - name: Examples gallery
-      url: https://examples.textmode.art/textmode.accurate.js/
-      about: Browse runnable textmode.accurate.js examples and compare expected behavior.
     - name: Web editor
       url: https://editor.textmode.art/
       about: Create and share a minimal reproduction using the official textmode.js libraries.

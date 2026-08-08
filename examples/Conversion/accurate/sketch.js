@@ -1,8 +1,10 @@
 /**
- * @title AccurateConversionPlugin
+ * @title Conversion.accurate
  * @author humanbydefinition
  */
+
 const VIDEO_URL = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+
 const t = textmode.create({
 	width: window.innerWidth,
 	height: window.innerHeight,
@@ -10,22 +12,16 @@ const t = textmode.create({
 	plugins: [AccurateConversionPlugin],
 });
 
+const labelLayer = t.layers.add();
+
 let video;
 let playFailed = false;
 
-function drawLabel(text, y, color = [255, 255, 255]) {
+function drawText(text, x, y, r = 220, g = 230, b = 255) {
 	t.push();
-	t.translate(-Math.floor(text.length / 2), y);
-	t.charColor(color[0], color[1], color[2]);
-
-	for (let i = 0; i < text.length; i++) {
-		t.push();
-		t.translate(i, 0);
-		t.char(text[i]);
-		t.point();
-		t.pop();
-	}
-
+	t.printAlign('left', 'top');
+	t.charColor(r, g, b);
+	t.print(text, x, y);
 	t.pop();
 }
 
@@ -44,21 +40,31 @@ t.setup(async () => {
 	}
 });
 
+labelLayer.draw(() => {
+	t.clear();
+	const left = -Math.floor(t.grid.cols / 2);
+	const top = -Math.floor(t.grid.rows / 2);
+	let y = top + 3;
+	const x = left + 3;
+
+	drawText('CONVERSION.ACCURATE', x, y++, 255, 225, 140);
+	drawText('------------------------------------', x, y++, 80, 100, 150);
+	drawText('CONCEPT: GLYPH-SHAPE MATCHING', x, y++, 100, 220, 255);
+	drawText('Samples cells, picks closest glyph.', x, y++, 140, 160, 190);
+	drawText('------------------------------------', x, y++, 80, 100, 150);
+	if (playFailed || (video && !video.isPlaying)) {
+		drawText('click to play video', x, y++, 140, 200, 255);
+	}
+});
+
 t.draw(() => {
 	t.background(0);
 	if (!video) return;
-
 	t.image(video);
-	drawLabel("conversionMode('accurate')", Math.floor(t.grid.rows / 2) - 3, [255, 225, 140]);
-
-	if (playFailed || !video.isPlaying) {
-		drawLabel('click to play video', Math.floor(t.grid.rows / 2), [140, 200, 255]);
-	}
 });
 
 t.mouseClicked(async () => {
 	if (!video) return;
-
 	playFailed = false;
 	await video.play();
 });

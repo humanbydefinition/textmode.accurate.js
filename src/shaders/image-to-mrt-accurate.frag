@@ -2,6 +2,7 @@
 precision highp float;
 
 in vec2 v_uv;
+in vec3 v_worldPosition;
 
 // Base uniforms filled in by textmode.js
 uniform sampler2D u_image;
@@ -17,23 +18,32 @@ uniform vec4 u_backgroundColor;
 uniform int u_charCount;
 uniform sampler2D u_charPaletteTexture;
 uniform ivec2 u_charPaletteDimensions;
-uniform bool u_colorFilterEnabled;
-uniform int u_colorFilterSize;
-uniform vec4 u_colorFilterPalette[64];
 
 // Uniforms specific to accurate conversion
 uniform sampler2D u_characterTexture;
 uniform ivec2 u_charsetDimensions;
 uniform vec2 u_imageCellDimensions;
 uniform int u_sampleGridSize;
+uniform float u_accurateBrightnessStart;
+uniform float u_accurateBrightnessEnd;
 
 layout(location = 0) out vec4 o_character;
 layout(location = 1) out vec4 o_primaryColor;
 layout(location = 2) out vec4 o_secondaryColor;
+layout(location = 3) out vec4 o_statePayload;
+
+// Keep accurate conversion aligned with textmode.js' source-conversion lighting contract.
+uniform bool u_tmUseLighting;
+uniform vec3 u_tmAmbientLightColor;
+uniform int u_tmPointLightCount;
+uniform vec3 u_tmPointLightPositions[5];
+uniform vec3 u_tmPointLightColors[5];
+uniform vec3 u_tmLightFalloff;
 
 const float ALPHA_EPSILON = 0.01;
 const int MAX_SAMPLE_STEPS = 16;
 const int MAX_GRID_SAMPLES = MAX_SAMPLE_STEPS * MAX_SAMPLE_STEPS;
+const int TM_MAX_POINT_LIGHTS = 5;
 
 float luminance(vec3 c) {
     return dot(c, vec3(0.299, 0.587, 0.114));
@@ -58,33 +68,43 @@ vec3 fetchCharPaletteColor(int index) {
     return texelFetch(u_charPaletteTexture, ivec2(x, y), 0).rgb;
 }
 
-float colorDistance(vec3 a, vec3 b) {
-    vec3 diff = a - b;
-    return dot(diff, diff);
+vec3 tmComputeGeometricNormal(vec3 worldPosition) {
+    vec3 normal = cross(dFdy(worldPosition), dFdx(worldPosition));
+    float normalLength = length(normal);
+    if (normalLength <= 0.000001f) {
+        return vec3(0.0f, 0.0f, 1.0f);
+    }
+    return normal / normalLength;
 }
 
-vec4 applyColorFilter(vec4 color) {
-    if (!u_colorFilterEnabled || u_colorFilterSize <= 0) {
-        return color;
+vec3 tmApplyLighting(vec3 baseColor, vec3 worldPosition) {
+    if (!u_tmUseLighting) {
+        return baseColor;
     }
 
-    int paletteCount = min(u_colorFilterSize, 64);
-    vec3 best = u_colorFilterPalette[0].rgb;
-    float minDist = colorDistance(color.rgb, best);
+    vec3 litColor = baseColor * u_tmAmbientLightColor;
 
-    for (int i = 1; i < 64; ++i) {
-        if (i >= paletteCount) {
-            break;
-        }
-        vec3 candidate = u_colorFilterPalette[i].rgb;
-        float dist = colorDistance(color.rgb, candidate);
-        if (dist < minDist) {
-            minDist = dist;
-            best = candidate;
+    if (u_tmPointLightCount > 0) {
+        vec3 normal = tmComputeGeometricNormal(worldPosition);
+
+        for (int i = 0; i < TM_MAX_POINT_LIGHTS; ++i) {
+            if (i >= u_tmPointLightCount) {
+                break;
+            }
+
+            vec3 toLight = u_tmPointLightPositions[i] - worldPosition;
+            float distanceToLight = length(toLight);
+            vec3 lightDirection = distanceToLight > 0.000001f ? toLight / distanceToLight : normal;
+            float diffuse = max(dot(normal, lightDirection), 0.0f);
+
+            float attenuationDenominator =
+                u_tmLightFalloff.x + distanceToLight * u_tmLightFalloff.y + distanceToLight * distanceToLight * u_tmLightFalloff.z;
+            float attenuation = attenuationDenominator > 0.0f ? 1.0f / attenuationDenominator : 1.0f;
+            litColor += baseColor * u_tmPointLightColors[i] * (diffuse * attenuation);
         }
     }
 
-    return vec4(best, color.a);
+    return clamp(litColor, 0.0f, 1.0f);
 }
 
 void main() {
@@ -98,17 +118,12 @@ void main() {
     int steps = clamp(u_sampleGridSize, 1, MAX_SAMPLE_STEPS);
     float invSteps = 1.0 / float(steps);
     int sampleCount = steps * steps;
-
-    float brightnessSamples[MAX_GRID_SAMPLES];
-    vec3 colorSamples[MAX_GRID_SAMPLES];
-    float alphaSamples[MAX_GRID_SAMPLES];
     float splitMask[MAX_GRID_SAMPLES];
 
     float brightnessSum = 0.0;
     vec4 fallbackSample;
     vec2 centerUV = (cellMin + cellMax) * 0.5;
     fallbackSample = texture(u_image, centerUV);
-    fallbackSample = applyColorFilter(fallbackSample);
 
     for (int sy = 0; sy < MAX_SAMPLE_STEPS; ++sy) {
         if (sy >= steps) {
@@ -119,48 +134,53 @@ void main() {
                 break;
             }
 
-            int idx = sy * steps + sx;
             vec2 offset = (vec2(float(sx), float(sy)) + 0.5) * invSteps;
             vec2 sampleCoord = cellMin + offset * cellSize;
             vec4 sampleColor = texture(u_image, sampleCoord);
-            sampleColor = applyColorFilter(sampleColor);
             float lum = luminance(sampleColor.rgb);
 
-            brightnessSamples[idx] = lum;
-            colorSamples[idx] = sampleColor.rgb;
-            alphaSamples[idx] = sampleColor.a;
             brightnessSum += lum;
         }
     }
 
     float avgBrightness = sampleCount > 0 ? brightnessSum / float(sampleCount) : 0.0;
-
+    if (avgBrightness < u_accurateBrightnessStart || avgBrightness > u_accurateBrightnessEnd) {
+        discard;
+    }
     vec3 primaryAccum = vec3(0.0);
     vec3 secondaryAccum = vec3(0.0);
     float primaryWeight = 0.0;
     float secondaryWeight = 0.0;
     bool hasOpaqueSample = false;
 
-    for (int i = 0; i < MAX_GRID_SAMPLES; ++i) {
-        if (i >= sampleCount) {
+    for (int sy = 0; sy < MAX_SAMPLE_STEPS; ++sy) {
+        if (sy >= steps) {
             break;
         }
+        for (int sx = 0; sx < MAX_SAMPLE_STEPS; ++sx) {
+            if (sx >= steps) {
+                break;
+            }
 
-        float alpha = alphaSamples[i];
-        if (alpha > ALPHA_EPSILON) {
-            hasOpaqueSample = true;
-        }
+            vec2 offset = (vec2(float(sx), float(sy)) + 0.5) * invSteps;
+            vec2 sampleCoord = cellMin + offset * cellSize;
+            vec4 sampleColor = texture(u_image, sampleCoord);
+            int idx = sy * steps + sx;
+            float alpha = sampleColor.a;
+            if (alpha > ALPHA_EPSILON) {
+                hasOpaqueSample = true;
+            }
 
-        float mask = brightnessSamples[i] >= avgBrightness ? 1.0 : 0.0;
-        splitMask[i] = mask;
-
-        float weight = max(alpha, 0.0001);
-        if (mask > 0.5) {
-            primaryAccum += colorSamples[i] * weight;
-            primaryWeight += weight;
-        } else {
-            secondaryAccum += colorSamples[i] * weight;
-            secondaryWeight += weight;
+            float mask = luminance(sampleColor.rgb) >= avgBrightness ? 1.0 : 0.0;
+            splitMask[idx] = mask;
+            float weight = max(alpha, 0.0001);
+            if (mask > 0.5) {
+                primaryAccum += sampleColor.rgb * weight;
+                primaryWeight += weight;
+            } else {
+                secondaryAccum += sampleColor.rgb * weight;
+                secondaryWeight += weight;
+            }
         }
     }
 
@@ -200,8 +220,8 @@ void main() {
                         break;
                     }
 
-                    int idx = sy * steps + sx;
                     vec2 offset = (vec2(float(sx), float(sy)) + 0.5) * invSteps;
+                    int idx = sy * steps + sx;
                     vec2 glyphUV = glyphMin + offset * glyphCellSize;
                     float glyphLum = texture(u_characterTexture, glyphUV).r;
                     float diff = splitMask[idx] - glyphLum;
@@ -229,6 +249,7 @@ void main() {
     float packedFlags = float(invertFlag | (flipXFlag << 1) | (flipYFlag << 2)) / 255.0;
 
     o_character = vec4(bestEncoded, packedFlags, clamp(u_charRotation, 0.0, 1.0));
-    o_primaryColor = vec4(charCol.rgb, charCol.a);
-    o_secondaryColor = vec4(cellCol.rgb, cellCol.a);
+    o_primaryColor = vec4(tmApplyLighting(charCol.rgb, v_worldPosition), charCol.a);
+    o_secondaryColor = vec4(tmApplyLighting(cellCol.rgb, v_worldPosition), cellCol.a);
+    o_statePayload = vec4(0.0);
 }

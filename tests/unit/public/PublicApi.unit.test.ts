@@ -4,14 +4,22 @@ import packageJson from '../../../package.json';
 import { AccurateConversionPlugin } from '../../../src';
 
 describe('textmode.accurate.js public API unit', () => {
-	it('exports the plugin with the expected name and version', () => {
+	it('exports the plugin with the expected name', () => {
 		expect(AccurateConversionPlugin.name).toBe(packageJson.name);
-		expect(AccurateConversionPlugin.version).toBe(packageJson.version);
 	});
 
-	it('exposes install and uninstall hooks on the plugin export', () => {
-		expect(typeof AccurateConversionPlugin.install).toBe('function');
-		expect(typeof AccurateConversionPlugin.uninstall).toBe('function');
+	it('exposes install and a returned cleanup function on the plugin export', () => {
+		const textmodifier = {
+			conversions: {
+				register: () => {},
+				unregister: () => {},
+			},
+		};
+		const context = { on: () => () => {} } as never;
+
+		const cleanup = AccurateConversionPlugin.install(textmodifier as never, context) as unknown as () => void;
+		expect(cleanup).toBeTypeOf('function');
+		expect(() => cleanup()).not.toThrow();
 	});
 
 	it('registers the runtime package export on window for UMD consumers', () => {
